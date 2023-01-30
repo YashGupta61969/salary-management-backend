@@ -18,8 +18,12 @@ cron.schedule("* * 1 * *",()=>{
   db.Salary.findAll({})
   .then((response)=>{
     response.map(res=>{
+      const month = res.month === 11 ? 0 : new Date().getMonth();
+      const year = res.month === 11 ? new Date().getFullYear() : res.year;
+
       db.Salary.update({
-        month:res.month + 1,
+        month,
+        year,
         is_salary_calculated: 0,
         total_salary_made:0
       },{
@@ -48,7 +52,7 @@ cron.schedule("* * 2 * *", () => {
           console.log('Salary already Processed')
         } else {
           db.Salary.update({
-            base_salary:response.Employee.base_salary,
+            total_salary_made:response.Employee.base_salary,
             is_salary_calculated:true
           },{
             where:{
