@@ -43,7 +43,7 @@ module.exports = (sequelize, DataTypes) => {
       is_salary_calculated: {
         type: DataTypes.BOOLEAN,
         defaultValue: 0,
-      },
+      }
     },
     {
       sequelize,

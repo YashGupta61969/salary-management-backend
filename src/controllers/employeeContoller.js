@@ -3,36 +3,74 @@ const db = require("../../models");
 
 exports.getAll = (req, res) => {
   const currentmonth = new Date().getMonth();
+  let previousMonth;
+  let year = new Date().getFullYear();
 
-  db.Salary.findAll({}).then(resp => {
-    let totalWorkingDays = resp.reduce((prev, curr) => {
-      return (Number(prev?.total_working_days ? prev.total_working_days : prev) + Number(curr.total_working_days ? curr.total_working_days : curr))
-    })
+  if (currentmonth === 0) {
+    previousMonth = 11
+    year = new Date().getFullYear() - 1
+  } else {
+    previousMonth = currentmonth - 1
+  }
 
-    let totalLeavesTaken = resp.reduce((prev, curr) => {
+  db.Salary.findAll({
+    where:{
+      month:currentmonth,
+      year:new Date().getFullYear()
+    }
+  }).then(resp => {
+    const totalWorkingDays = resp.reduce((prev, curr) => {
+      if (typeof prev === 'object') {
+        return prev.total_working_days + curr.total_working_days
+      } else {
+        return prev + curr.total_working_days
+      }
+    }, 0)
+
+    const totalLeavesTaken = resp.reduce((prev, curr) => {
       if (typeof prev === 'object') {
         return prev.total_leaves_taken + curr.total_leaves_taken
       } else {
         return prev + curr.total_leaves_taken
       }
+    }, 0)
+
+
+    db.Salary.findAll({
+      where: {
+        month: previousMonth,
+        year
+      }
+    }).then(response => {
+      const PreviousTotalWorkingDays = response.reduce((prev, curr) => {
+        if (typeof prev === 'object') {
+          return prev.total_working_days + curr.total_working_days
+        } else {
+          return prev + curr.total_working_days
+        }
+      }, 0)
+
+      const previousTotalLeavesTaken = response.reduce((prev, curr) => {
+        if (typeof prev === 'object') {
+          return prev.total_leaves_taken + curr.total_leaves_taken
+        } else {
+          return prev + curr.total_leaves_taken
+        }
+      }, 0)
+
+      db.Employee.findAll({})
+        .then((data) => {
+          res.send({
+            result: data,
+            this_month_attendence: (totalLeavesTaken * 100) / totalWorkingDays,
+            last_month_attendence: (previousTotalLeavesTaken * 100) / PreviousTotalWorkingDays
+          });
+        })
+        .catch((err) => {
+          res.send({ error: err });
+        });
     })
 
-    let previousMonth;
-    if (currentmonth === 0) {
-      previousMonth = 11
-    } else {
-      previousMonth = currentmonth + 1
-    }
-
-    console.log(previousMonth)
-
-    db.Employee.findAll({})
-      .then((data) => {
-        res.send({ result: data, this_month_attendence: (totalLeavesTaken * 100) / totalWorkingDays });
-      })
-      .catch((err) => {
-        res.send({ error: err });
-      });
 
   })
 };
@@ -71,23 +109,30 @@ exports.createEmployee = (req, res) => {
 };
 
 exports.updateEmplyee = (req, res) => {
-  db.Employee.update(req.body)
+  db.Employee.update(req.body,{where:{id:req.params.id}})
     .then(() => {
-      res.send({ message: "Employee Updated Successfully" });
+      res.send({status:'success', message: "Employee Updated Successfully" });
     })
-    .catch((err) => res.send(err));
+    .catch((err) => res.send({status:'error',error:err}));
 };
 
-exports.deleteEmplyee = (req, res) => {
-  db.Employee.destroy({
-    where: {
-      email: {
-        [Op.eq]: req.params.id,
+exports.deleteEmployee = (req, res) => {
+ 
+  db.Salary.destroy({
+    where:{
+      employee_id: req.params.id,
+    }
+  }).then(()=>{
+    db.Employee.destroy({
+      where: {
+        id: req.params.id,
       },
-    },
-  })
-    .then(() => {
-      res.send({ message: "Employee Updated Successfully" });
     })
-    .catch((err) => res.send(err));
+      .then(() => {
+        res.send({status:'success', message: "Employee Deleted Successfully" });
+      })
+      .catch((err) => res.send({status:'error',error:err}));
+  }).catch(err=>{
+    res.send({status:'error',error:err})
+  })
 };
