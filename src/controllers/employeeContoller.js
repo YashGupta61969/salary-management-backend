@@ -8,14 +8,14 @@ exports.getAll = (req, res) => {
 
   if (currentmonth === 0) {
     previousMonth = 11
-    year = new Date().getFullYear() - 1
+    year = year - 1
   } else {
     previousMonth = currentmonth - 1
   }
 
   db.Salary.findAll({
     where:{
-      month:currentmonth,
+      month:currentmonth, 
       year:new Date().getFullYear()
     }
   }).then(resp => {
@@ -49,7 +49,7 @@ exports.getAll = (req, res) => {
           return prev + curr.total_working_days
         }
       }, 0)
-
+          
       const previousTotalLeavesTaken = response.reduce((prev, curr) => {
         if (typeof prev === 'object') {
           return prev.total_leaves_taken + curr.total_leaves_taken
